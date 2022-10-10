@@ -1,39 +1,39 @@
-<!-- 
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+## Linux Datetime
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/guides/libraries/writing-package-pages). 
-
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-library-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/developing-packages). 
--->
-
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
-
-## Features
-
-TODO: List what your package can do. Maybe include images, gifs, or videos.
-
-## Getting started
-
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
-
-## Usage
-
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder. 
+This service exposes the `org.freedesktop.timedate1` dbus interface as a reusable, stream-conglomerate.
+This is useful when you want to modify the datetime and timezone of your linux system and want to listen to these changes at the same time.
 
 ```dart
-const like = 'sample';
+class DateTimeModel extends SafeChangeNotifier {
+  final LinuxDateTime _dateTimeService;
+  StreamSubscription<String?>? _timezoneSub;
+  StreamSubscription<bool?>? _ntpSyncSub;
+  Timer? _fetchDateTimeTimer;
+  DateTime? _dateTime;
+
+  DateTimeModel({
+    required LinuxDateTime dateTimeService,
+  });
+
+  Future<void> init() {
+    return _dateTimeService.init().then((_) async {
+      _timezoneSub = _dateTimeService.timezoneChanged.listen((_) {
+        notifyListeners();
+      });
+      _ntpSyncSub = _dateTimeService.ntpChanged.listen((_) {
+        notifyListeners();
+      });
+      _dateTime = await _dateTimeService.getDateTime();
+      notifyListeners();
+
+      _fetchDateTimeTimer = Timer.periodic(
+        const Duration(seconds: 1),
+        (timer) async {
+          _dateTime = await _dateTimeService.getDateTime();
+          notifyListeners();
+        },
+      );
+    });
+  }
+}
 ```
-
-## Additional information
-
-TODO: Tell users more about the package: where to find more information, how to 
-contribute to the package, how to file issues, what response they can expect 
-from the package authors, and more.
